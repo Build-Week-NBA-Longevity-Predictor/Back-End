@@ -29,7 +29,7 @@ server.post("/register", (req, res) => {
     db("users")
       .insert(newUser)
       .then(response => {
-        res.status(201).json(response);
+        res.status(201).json({ response, message: "User created" });
       })
       .catch(err => {
         res.status(500).json(err);
