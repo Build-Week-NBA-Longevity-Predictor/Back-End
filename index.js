@@ -6,6 +6,7 @@ const axios = require("axios");
 const knex = require("knex");
 const dbConfig = require("./knexfile.js");
 const bcrypt = require("bcrypt");
+const jwt = require("jsonwebtoken");
 
 const server = express();
 const db = knex(dbConfig.development);
@@ -15,6 +16,25 @@ server.use(helmet());
 server.use(express.json());
 
 server.set("port", process.env.PORT || 8000);
+
+const secret = process.env.SECRET_KEY;
+
+const generateToken = user => {
+  return jwt.sign({ user: user.email }, secret, { expiresIn: "1hr" });
+};
+
+const decodeToken = token => {
+  return jwt.verify(token, secret);
+};
+
+const getSearches = userId => {
+  db("searches")
+    .where({ user_id: userId })
+    .then(data => {
+      return data;
+    })
+    .catch(err => console.error(err));
+};
 
 server.get("/", (req, res) => {
   res.status(200).json({ message: "server is good" });
@@ -29,7 +49,10 @@ server.post("/register", (req, res) => {
     db("users")
       .insert(newUser)
       .then(response => {
-        res.status(201).json({ response, message: "User created" });
+        const token = generateToken(newUser.email);
+        res
+          .status(201)
+          .json({ response, message: "User created", token: token });
       })
       .catch(err => {
         res.status(500).json(err);
@@ -48,7 +71,10 @@ server.post("/login", (req, res) => {
       .then(user => {
         if (user) {
           if (bcrypt.compareSync(creds.password, user.password)) {
-            res.status(200).json({ message: "Logged in" });
+            const token = generateToken(user.email);
+            const saved = getSearches(user.id);
+
+            res.status(200).json({ message: "Logged in", token: token });
           } else {
             res.status(401).json({ message: "Incorrect username or password" });
           }
