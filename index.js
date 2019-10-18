@@ -43,16 +43,30 @@ server.post("/register", (req, res) => {
     newUser.password = bcrypt.hashSync(newUser.password, 10);
 
     db("users")
-      .insert(newUser, ["id"])
-      .then(response => {
-        const token = generateToken({ email: newUser.email, id: response });
-        res
-          .status(201)
-          .json({ response, message: "User created", token: token });
+      .where({ email: newUser.email })
+      .then(users => {
+        if (users.length > 0) {
+          res
+            .status(400)
+            .json({ error: "A user with this email already exists" });
+        } else {
+          db("users")
+            .insert(newUser, ["id"])
+            .then(response => {
+              const token = generateToken({
+                email: newUser.email,
+                id: response
+              });
+              res
+                .status(201)
+                .json({ response, message: "User created", token: token });
+            })
+            .catch(err => {
+              res.status(500).json(err);
+            });
+        }
       })
-      .catch(err => {
-        res.status(500).json(err);
-      });
+      .catch(err => console.error(err));
   } else {
     res.status(400).json({ error: "Request missing one or more parameters" });
   }
