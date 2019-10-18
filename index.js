@@ -1,4 +1,4 @@
-require("dotenv");
+require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 const helmet = require("helmet");
@@ -20,20 +20,16 @@ server.set("port", process.env.PORT || 8000);
 const secret = process.env.SECRET_KEY;
 
 const generateToken = user => {
-  return jwt.sign({ user: user.email }, secret, { expiresIn: "1hr" });
+  console.log("generating token for user", user);
+  return jwt.sign({ user: user.email, id: user.id }, secret, {
+    expiresIn: "1hr"
+  });
 };
 
 const decodeToken = token => {
-  return jwt.verify(token, secret);
-};
-
-const getSearches = userId => {
-  db("searches")
-    .where({ user_id: userId })
-    .then(data => {
-      return data;
-    })
-    .catch(err => console.error(err));
+  const decoded = jwt.verify(token, secret);
+  console.log("decoded", decoded);
+  return decoded;
 };
 
 server.get("/", (req, res) => {
@@ -47,9 +43,9 @@ server.post("/register", (req, res) => {
     newUser.password = bcrypt.hashSync(newUser.password, 10);
 
     db("users")
-      .insert(newUser)
+      .insert(newUser, ["id"])
       .then(response => {
-        const token = generateToken(newUser.email);
+        const token = generateToken({ email: newUser.email, id: response });
         res
           .status(201)
           .json({ response, message: "User created", token: token });
@@ -71,8 +67,7 @@ server.post("/login", (req, res) => {
       .then(user => {
         if (user) {
           if (bcrypt.compareSync(creds.password, user.password)) {
-            const token = generateToken(user.email);
-            const saved = getSearches(user.id);
+            const token = generateToken({ email: user.email, id: user.id });
 
             res.status(200).json({ message: "Logged in", token: token });
           } else {
@@ -84,6 +79,34 @@ server.post("/login", (req, res) => {
       });
   } else {
     res.status(401).json({ message: "Incorrect username or password" });
+  }
+});
+
+server.post("/search", (req, res) => {
+  const user = decodeToken(req.body.token);
+  console.log("user", user);
+  if (user.error) {
+    res.status(401).json({ error: "Invalid token" });
+  } else {
+    db("searches")
+      .insert({ user_id: user.id, player_name: req.body.player })
+      .then(result => {
+        res.status(201).json({ player: req.body.player });
+      });
+  }
+});
+
+server.post("/history", (req, res) => {
+  const user = decodeToken(req.body.token);
+  if (user.error) {
+    res.status(401).json({ error: "Invalid token" });
+  } else {
+    db("searches")
+      .where({ user_id: user.id })
+      .then(results => {
+        res.status(200).json({ history: results });
+      })
+      .catch(err => console.error(err));
   }
 });
 
