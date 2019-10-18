@@ -11,9 +11,9 @@ The url for the back end is <https://nba-predictor-ptbw.herokuapp.com/>
 ### ... Register
 
 Send POST request to `/register` with `Email` and `Password` in the body.
-Successful login returns a success message: "User created"
+Successful login returns `{ message: "User created", token: <generated JWT with 1 hr expiration> }`
 
 ### ... Login
 
 Send POST request to `/login` with `Email` and `Password` in the body.
-Successful login returns a success message: "Logged in"
+Successful login returns `{ message: "Logged in", token: <generated JWT with 1 hr expiration> }`
