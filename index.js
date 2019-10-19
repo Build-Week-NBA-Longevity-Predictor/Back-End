@@ -144,6 +144,37 @@ server.post("/delete", (req, res) => {
   }
 });
 
+server.put("/update", (req, res) => {
+  const user = decodeToken(req.body.token);
+  if (req.body.searchId === undefined) {
+    res.status(400).json({ error: "Missing search id" });
+  } else if (user.error) {
+    res.status(401).json({ error: "Invalid token" });
+  } else {
+    db("searches").where({ id: req.body.searchId }).first().then(record => {
+      // Rerun data analysis using the player name associated with this id
+      if(record === undefined) {
+        res.status(404).json({ error: "Requested record not found"})
+      } else if(user.id === record.user_id) {
+        db("searches")
+          .where({ id: req.body.searchId })
+          .update({ player_name: record.player_name}, ['id'])
+          .then(updated => {
+            console.log('updated', updated);
+            if (updated === 1) {
+              res.status(200).json({ message: "Record updated", player: record.player_name });
+            } else {
+              res.status(404).json({ error: "Search record not found" });
+            }
+          })
+          .catch(err => console.error(err));
+      } else {
+        res.status(401).json({ error: 'You are not authorized to alter that record' });
+      }
+    }).catch(err => console.error(err));
+  }
+});
+
 server.listen(server.get("port"), () => {
   console.log("=== Listening on port", server.get("port"), " ===");
 });
