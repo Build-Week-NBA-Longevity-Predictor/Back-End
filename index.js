@@ -20,7 +20,6 @@ server.set("port", process.env.PORT || 8000);
 const secret = process.env.SECRET_KEY;
 
 const generateToken = user => {
-  console.log("generating token for user", user);
   return jwt.sign({ user: user.email, id: user.id }, secret, {
     expiresIn: "1hr"
   });
@@ -28,7 +27,7 @@ const generateToken = user => {
 
 const decodeToken = token => {
   const decoded = jwt.verify(token, secret);
-  console.log("decoded", decoded);
+
   return decoded;
 };
 
@@ -119,6 +118,27 @@ server.post("/history", (req, res) => {
       .where({ user_id: user.id })
       .then(results => {
         res.status(200).json({ history: results });
+      })
+      .catch(err => console.error(err));
+  }
+});
+
+server.post("/delete", (req, res) => {
+  const user = decodeToken(req.body.token);
+  if (req.body.searchId === undefined) {
+    res.status(400).json({ error: "Missing search id" });
+  } else if (user.error) {
+    res.status(401).json({ error: "Invalid token" });
+  } else {
+    db("searches")
+      .where({ id: req.body.searchId })
+      .del()
+      .then(deleted => {
+        if (deleted === 0) {
+          res.status(404).json({ error: "Search record not found" });
+        } else {
+          res.status(200).json({ message: "Record deleted" });
+        }
       })
       .catch(err => console.error(err));
   }
