@@ -40,5 +40,5 @@ Will return `{ message: "Record deleted" }` on success or if given a non existen
 Send PUT request to `/update` with `{ token: <JWT token>, searchId: <id number of search record to update>}`.
 Will return `{ message: "Record updated", player: <Player name> }` on success or if given a non existent id will return status 404, `{ error: "Search record not found" }`
 
-Due to lack of data, this will currently only return the player name. 
+Due to lack of data, this will currently only return the player name.
 Note: once data is available, this route will only rerun this player's prediction, the player name will not be changed.

@@ -32,7 +32,9 @@ const decodeToken = token => {
 };
 
 server.get("/", (req, res) => {
-  res.status(200).json({ message: "server is good" });
+  db("searches").then(data => {
+    res.status(200).json({ data: data });
+  });
 });
 
 server.post("/register", (req, res) => {
@@ -151,27 +153,36 @@ server.put("/update", (req, res) => {
   } else if (user.error) {
     res.status(401).json({ error: "Invalid token" });
   } else {
-    db("searches").where({ id: req.body.searchId }).first().then(record => {
-      // Rerun data analysis using the player name associated with this id
-      if(record === undefined) {
-        res.status(404).json({ error: "Requested record not found"})
-      } else if(user.id === record.user_id) {
-        db("searches")
-          .where({ id: req.body.searchId })
-          .update({ player_name: record.player_name}, ['id'])
-          .then(updated => {
-            console.log('updated', updated);
-            if (updated === 1) {
-              res.status(200).json({ message: "Record updated", player: record.player_name });
-            } else {
-              res.status(404).json({ error: "Search record not found" });
-            }
-          })
-          .catch(err => console.error(err));
-      } else {
-        res.status(401).json({ error: 'You are not authorized to alter that record' });
-      }
-    }).catch(err => console.error(err));
+    db("searches")
+      .where({ id: req.body.searchId })
+      .first()
+      .then(record => {
+        // Rerun data analysis using the player name associated with this id
+        if (record === undefined) {
+          res.status(404).json({ error: "Requested record not found" });
+        } else if (user.id === record.user_id) {
+          db("searches")
+            .where({ id: req.body.searchId })
+            .update({ player_name: record.player_name }, ["id"])
+            .then(updated => {
+              console.log("updated", updated);
+              if (updated === 1) {
+                res.status(200).json({
+                  message: "Record updated",
+                  player: record.player_name
+                });
+              } else {
+                res.status(404).json({ error: "Search record not found" });
+              }
+            })
+            .catch(err => console.error(err));
+        } else {
+          res
+            .status(401)
+            .json({ error: "You are not authorized to alter that record" });
+        }
+      })
+      .catch(err => console.error(err));
   }
 });
 
