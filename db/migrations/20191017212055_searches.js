@@ -4,6 +4,7 @@ exports.up = function(knex) {
     tbl.string("player_name").notNullable();
     tbl.integer("user_id").notNullable();
     tbl.foreign("user_id").references("users.id");
+    tbl.string("data");
   });
 };
 

@@ -18,6 +18,7 @@ server.use(express.json());
 server.set("port", process.env.PORT || 8000);
 
 const secret = process.env.SECRET_KEY;
+const url = 'https://nba-longevity.herokuapp.com/predict';
 
 const generateToken = user => {
   return jwt.sign({ user: user.email, id: user.id }, secret, {
@@ -99,15 +100,19 @@ server.post("/login", (req, res) => {
 
 server.post("/search", (req, res) => {
   const user = decodeToken(req.body.token);
-  console.log("user", user);
+  console.log("body", req.body);
   if (user.error) {
     res.status(401).json({ error: "Invalid token" });
   } else {
-    db("searches")
-      .insert({ user_id: user.id, player_name: req.body.player })
-      .then(result => {
-        res.status(201).json({ player: req.body.player });
-      });
+    axios.post(url, { player: req.body.player }).then(results => {
+      let data = JSON.stringify(results.data);
+      db("searches")
+        .insert({ user_id: user.id, player_name: req.body.player, data: data })
+        .then(result => {
+          res.status(201).json({ player: req.body.player });
+        })
+        .catch(error => console.error(error));
+    }).catch(error => console.error(error));
   }
 });
 
@@ -119,7 +124,11 @@ server.post("/history", (req, res) => {
     db("searches")
       .where({ user_id: user.id })
       .then(results => {
-        res.status(200).json({ history: results });
+        let history = [];
+        for (let result of results) {
+          history.push({ ...result, stats: JSON.parse(result.stats) });
+        }
+        res.status(200).json({ history: history });
       })
       .catch(err => console.error(err));
   }
@@ -157,25 +166,26 @@ server.put("/update", (req, res) => {
       .where({ id: req.body.searchId })
       .first()
       .then(record => {
-        // Rerun data analysis using the player name associated with this id
         if (record === undefined) {
           res.status(404).json({ error: "Requested record not found" });
         } else if (user.id === record.user_id) {
-          db("searches")
-            .where({ id: req.body.searchId })
-            .update({ player_name: record.player_name }, ["id"])
-            .then(updated => {
-              console.log("updated", updated);
-              if (updated === 1) {
-                res.status(200).json({
-                  message: "Record updated",
-                  player: record.player_name
-                });
-              } else {
-                res.status(404).json({ error: "Search record not found" });
-              }
-            })
-            .catch(err => console.error(err));
+          axios.post(url, { player: record.player_name}).then(updated => {
+            db("searches")
+              .where({ id: req.body.searchId })
+              .update({ stats: updated }, ["id"])
+              .then(updated => {
+                console.log("updated", updated);
+                if (updated === 1) {
+                  res.status(200).json({
+                    message: "Record updated",
+                    record: updated
+                  });
+                } else {
+                  res.status(404).json({ error: "Search record not found" });
+                }
+              })
+              .catch(err => console.error(err));
+          }).catch(err => console.error(err));
         } else {
           res
             .status(401)

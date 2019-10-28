@@ -22,13 +22,12 @@ Successful login returns `{ message: "Logged in", token: <generated JWT with 1 h
 
 ### **Add search**
 
-Send POST request to `/search` with `{ player: <player name>, token: <JWT token>}` in the request body.
-No data is currently available, so for now this will return `player`
+Send POST request to `/search` with `{ player: <player name>, token: <JWT token>}` in the request body. Will return `{ player: <player's name>, id: <id for the record>, stats: <player's stats(includes stats for the nearest matching player)>}`
 
 ### **Get searches**
 
 Send POST request to `/history` with `{ token: <JWT token> }` in the request body.
-Will return `{ history: [array of search names] }`
+Will return `{ history: [array of search results] }`. Shape of search results is `{ player: <player's name>, id: <id for the record>, stats: <player's stats(includes stats for the nearest matching player)>}`
 
 ### **Delete a search record**
 
@@ -38,7 +37,4 @@ Will return `{ message: "Record deleted" }` on success or if given a non existen
 ### **Update a search record**
 
 Send PUT request to `/update` with `{ token: <JWT token>, searchId: <id number of search record to update>}`.
-Will return `{ message: "Record updated", player: <Player name> }` on success or if given a non existent id will return status 404, `{ error: "Search record not found" }`
-
-Due to lack of data, this will currently only return the player name.
-Note: once data is available, this route will only rerun this player's prediction, the player name will not be changed.
+Will return `{ message: "Record updated", record: <updated search results> }` on success or if given a non existent id will return status 404, `{ error: "Search record not found" }`. Updates player's statistics and nearest matching player.
